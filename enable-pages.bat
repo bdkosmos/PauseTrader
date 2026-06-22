@@ -3,34 +3,19 @@ chcp 65001 >nul
 color 0E
 cls
 echo.
-echo   ╔════════════════════════════════════════════════════╗
-echo   ║  PauseTrader — включить сайт (1 настройка)         ║
-echo   ╚════════════════════════════════════════════════════╝
+echo   PauseTrader — включение сайта на GitHub Pages
+echo   =============================================
 echo.
-echo   Откроется Settings -^> Pages
-echo.
-echo   Выбери:
-echo     Source:  Deploy from a branch
-echo     Branch:  gh-pages
-echo     Folder:  / (root)
-echo.
-echo   Нажми Save
-echo.
-start https://github.com/bdkosmos/PauseTrader/settings/pages
-echo.
-echo   Когда сохранил — нажми Enter (перезапущу деплой)...
-pause >nul
-
 cd /d "E:\PauseTrader"
-git add -A
-git commit -m "fix: gh-pages deploy" 2>nul
-git push origin main
-
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0_enable-pages-api.ps1"
+if errorlevel 1 (
+  echo.
+  echo   Не удалось автоматически. Открою настройки...
+  start https://github.com/bdkosmos/PauseTrader/settings/pages
+  pause
+  exit /b 1
+)
 echo.
-echo   Подожди 1-2 минуты, затем открой:
-echo   https://bdkosmos.github.io/PauseTrader/
-echo.
-start https://github.com/bdkosmos/PauseTrader/actions
-timeout /t 90 /nobreak >nul
+echo   Готово! Сайт: https://bdkosmos.github.io/PauseTrader/
 start https://bdkosmos.github.io/PauseTrader/
 pause

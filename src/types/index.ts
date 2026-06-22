@@ -38,3 +38,29 @@ export interface CrosshairOHLC {
   volume: number;
   change: number;
 }
+
+export type OrderSide = 'buy' | 'sell';
+
+export interface PaperPosition {
+  symbol: string;
+  base: string;
+  quantity: number;
+  avgPrice: number;
+}
+
+export interface PaperTrade {
+  id: string;
+  symbol: string;
+  base: string;
+  side: OrderSide;
+  quantity: number;
+  price: number;
+  total: number;
+  timestamp: number;
+}
+
+export interface PaperAccount {
+  balanceUsdt: number;
+  positions: PaperPosition[];
+  trades: PaperTrade[];
+}

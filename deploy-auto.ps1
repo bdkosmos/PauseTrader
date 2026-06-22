@@ -2,7 +2,7 @@
 # Нужен один раз: Personal Access Token с правом repo
 
 $ErrorActionPreference = "Stop"
-$RepoOwner = "AiKtg"
+$RepoOwner = "bdkosmos"
 $RepoName = "PauseTrader"
 $ProjectDir = "E:\PauseTrader"
 $TokenFile = Join-Path $ProjectDir ".github-token"
@@ -88,13 +88,19 @@ git commit -m "PauseTrader deploy $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$nul
 git push -u origin main --force
 Write-Host "  Код залит" -ForegroundColor Green
 
-# Включить GitHub Pages (workflow)
+# Включить GitHub Pages (ветка gh-pages)
 try {
-    $pagesBody = @{ build_type = "workflow"; source = @{ branch = "main"; path = "/" } } | ConvertTo-Json
-    Invoke-RestMethod -Uri "https://api.github.com/repos/$RepoOwner/$RepoName/pages" -Method Put -Headers $headers -Body $pagesBody -ContentType "application/json" | Out-Null
+    $pagesBody = @{ source = @{ branch = "gh-pages"; path = "/" } } | ConvertTo-Json
+    Invoke-RestMethod -Uri "https://api.github.com/repos/$RepoOwner/$RepoName/pages" -Method Post -Headers $headers -Body $pagesBody -ContentType "application/json" | Out-Null
     Write-Host "  GitHub Pages включён" -ForegroundColor Green
 } catch {
-    Write-Host "  Pages: включи вручную Settings -> Pages -> GitHub Actions" -ForegroundColor Yellow
+    try {
+        $pagesBody = @{ build_type = "legacy"; source = @{ branch = "gh-pages"; path = "/" } } | ConvertTo-Json -Depth 3
+        Invoke-RestMethod -Uri "https://api.github.com/repos/$RepoOwner/$RepoName/pages" -Method Put -Headers $headers -Body $pagesBody -ContentType "application/json" | Out-Null
+        Write-Host "  GitHub Pages обновлён" -ForegroundColor Green
+    } catch {
+        Write-Host "  Pages уже включён или нужны права repo" -ForegroundColor Yellow
+    }
 }
 
 Write-Host ""

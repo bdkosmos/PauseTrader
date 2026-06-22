@@ -2,10 +2,12 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { IChartApi } from 'lightweight-charts';
 import { LeftToolbar, type Tool } from './components/LeftToolbar';
 import { OHLCPanel } from './components/OHLCPanel';
+import { PaperTradingPanel } from './components/PaperTradingPanel';
 import { TopBar } from './components/TopBar';
 import { TradingChart } from './components/TradingChart';
 import { Watchlist } from './components/Watchlist';
 import { useBinanceChart, useWatchlist } from './hooks/useBinanceChart';
+import { usePaperTrading } from './hooks/usePaperTrading';
 import type { ChartType, CrosshairOHLC, IndicatorState, Timeframe } from './types';
 
 const DEFAULT_INDICATORS: IndicatorState = {
@@ -24,12 +26,14 @@ function App() {
   const [indicators, setIndicators] = useState<IndicatorState>(DEFAULT_INDICATORS);
   const [activeTool, setActiveTool] = useState<Tool>('crosshair');
   const [watchlistOpen, setWatchlistOpen] = useState(true);
+  const [tradingOpen, setTradingOpen] = useState(true);
   const [crosshair, setCrosshair] = useState<CrosshairOHLC | null>(null);
 
   const chartRef = useRef<IChartApi | null>(null);
 
   const { candles, loading, refetch } = useBinanceChart(symbol, timeframe);
   const { items: watchlist, loading: wlLoading } = useWatchlist();
+  const { portfolio, buy, sell, reset } = usePaperTrading();
 
   const current = useMemo(
     () => watchlist.find((w) => w.symbol === symbol),
@@ -68,6 +72,16 @@ function App() {
       document.exitFullscreen();
     }
   };
+
+  const handleBuy = useCallback(
+    (usdtAmount: number) => buy(symbol, base, usdtAmount, price),
+    [buy, symbol, base, price],
+  );
+
+  const handleSell = useCallback(
+    (quantity: number) => sell(symbol, base, quantity, price),
+    [sell, symbol, base, price],
+  );
 
   return (
     <div className="tv-app">
@@ -128,6 +142,28 @@ function App() {
             chartRef={chartRef}
           />
         </div>
+
+        <button
+          className="tv-trading-toggle"
+          onClick={() => setTradingOpen(!tradingOpen)}
+        >
+          {tradingOpen ? '▶' : '◀'}
+        </button>
+
+        {tradingOpen && (
+          <div className="tv-trading-panel">
+            <PaperTradingPanel
+              symbol={symbol}
+              base={base}
+              price={price}
+              portfolio={portfolio}
+              watchlist={watchlist}
+              onBuy={handleBuy}
+              onSell={handleSell}
+              onReset={reset}
+            />
+          </div>
+        )}
       </div>
 
       <OHLCPanel data={crosshair} base={base} />
