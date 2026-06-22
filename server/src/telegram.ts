@@ -119,11 +119,23 @@ export async function handleTelegramUpdate(update: Record<string, unknown>) {
   }
 }
 
+function ntfyHeaderValue(value: string) {
+  // fetch() requires HTTP header values to be ByteString (Latin-1)
+  return value.replace(/[^\x20-\x7E]/g, (ch) => {
+    const map: Record<string, string> = {
+      '·': '-',
+      '▲': 'up',
+      '▼': 'down',
+    };
+    return map[ch] ?? '?';
+  });
+}
+
 export async function sendNtfyAlert(topic: string, title: string, message: string) {
   const res = await fetch(`${NTFY_BASE}/${topic}`, {
     method: 'POST',
     headers: {
-      Title: title,
+      Title: ntfyHeaderValue(title),
       Priority: 'high',
       Tags: 'chart,moneybag',
     },
@@ -178,7 +190,7 @@ export async function sendTestAlert(clientId: string) {
 
   const sent = await sendNtfyAlert(
     ntfyTopicForClient(clientId),
-    'PauseTrader · тест',
+    'PauseTrader test',
     text,
   );
   if (sent) return { channel: 'ntfy' as const };
