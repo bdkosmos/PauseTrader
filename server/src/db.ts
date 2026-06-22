@@ -300,6 +300,39 @@ export function saveAlert(
   });
 }
 
+export function replaceAlertsForClient(
+  clientId: string,
+  alerts: Array<{
+    id: string;
+    symbol: string;
+    base: string;
+    price: number;
+    direction: 'above' | 'below';
+  }>,
+) {
+  mutate((db) => {
+    for (const [id, alert] of Object.entries(db.alerts)) {
+      if (alert.client_id === clientId && alert.triggered === 0) {
+        delete db.alerts[id];
+      }
+    }
+
+    const ts = now();
+    for (const alert of alerts) {
+      db.alerts[alert.id] = {
+        id: alert.id,
+        client_id: clientId,
+        symbol: alert.symbol,
+        base: alert.base,
+        price: alert.price,
+        direction: alert.direction,
+        triggered: 0,
+        created_at: ts,
+      };
+    }
+  });
+}
+
 export function getActiveAlerts() {
   const db = loadDb();
   return Object.values(db.alerts).filter((a) => a.triggered === 0);

@@ -40,6 +40,8 @@ function App() {
     redeemLicense,
     apiOnline,
     loading: subLoading,
+    status: subStatus,
+    refresh: refreshSubscription,
   } = useSubscription();
 
   const indicators = useMemo(() => getIndicatorsForPlan(plan), [plan]);
@@ -206,6 +208,8 @@ function App() {
             <ProPanel
               isPro={isPro}
               clientId={clientId}
+              hasTelegram={subStatus?.hasTelegram ?? false}
+              onAlertsRefresh={refreshSubscription}
               items={allItems}
               symbol={symbol}
               base={base}

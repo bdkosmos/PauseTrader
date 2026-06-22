@@ -6,7 +6,7 @@ import {
   createLicense,
   getSubscriptionStatus,
   grantPro,
-  saveAlert,
+  replaceAlertsForClient,
 } from './db.js';
 import {
   createCheckoutSession,
@@ -20,6 +20,7 @@ import {
   handleTelegramUpdate,
   ntfyEnabled,
   ntfyUrlForClient,
+  sendTestAlert,
   startTelegramPolling,
   telegramEnabled,
 } from './telegram.js';
@@ -172,11 +173,27 @@ app.post('/api/v1/alerts/sync', (req, res) => {
     return res.status(403).json({ error: 'Алерты доступны только в Pro' });
   }
 
-  for (const alert of alerts) {
-    saveAlert(alert.id, clientId, alert.symbol, alert.base, alert.price, alert.direction);
-  }
-
+  replaceAlertsForClient(clientId, alerts);
   res.json({ ok: true, synced: alerts.length });
+});
+
+app.post('/api/v1/alerts/test', async (req, res) => {
+  try {
+    const { clientId } = req.body as { clientId?: string };
+    if (!clientId) return res.status(400).json({ error: 'clientId обязателен' });
+
+    const status = getSubscriptionStatus(clientId);
+    if (status.plan !== 'pro') {
+      return res.status(403).json({ error: 'Алерты доступны только в Pro' });
+    }
+
+    const result = await sendTestAlert(clientId);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(400).json({
+      error: err instanceof Error ? err.message : 'Не удалось отправить тест',
+    });
+  }
 });
 
 app.get('/api/v1/telegram/link-url', (req, res) => {

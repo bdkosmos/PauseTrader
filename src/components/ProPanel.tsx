@@ -10,6 +10,8 @@ type ProTab = 'screener' | 'alerts' | 'templates';
 interface ProPanelProps {
   isPro: boolean;
   clientId: string;
+  hasTelegram: boolean;
+  onAlertsRefresh?: () => void;
   items: SidebarItem[];
   symbol: string;
   base: string;
@@ -30,6 +32,8 @@ const TABS: { id: ProTab; label: string; icon: typeof Crown }[] = [
 export function ProPanel({
   isPro,
   clientId,
+  hasTelegram,
+  onAlertsRefresh,
   items,
   symbol,
   base,
@@ -75,7 +79,14 @@ export function ProPanel({
           <CoinScreener items={items} selected={selected} onSelect={onSelectSymbol} />
         )}
         {isPro && tab === 'alerts' && (
-          <TelegramAlerts clientId={clientId} symbol={symbol} base={base} price={price} />
+          <TelegramAlerts
+            clientId={clientId}
+            symbol={symbol}
+            base={base}
+            price={price}
+            hasTelegram={hasTelegram}
+            onTelegramLinked={onAlertsRefresh}
+          />
         )}
         {isPro && tab === 'templates' && (
           <ChartTemplates

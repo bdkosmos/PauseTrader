@@ -90,6 +90,13 @@ export async function getTelegramLinkUrl(clientId: string): Promise<{
   return request(`/api/v1/telegram/link-url?clientId=${encodeURIComponent(clientId)}`);
 }
 
+export async function testAlert(clientId: string) {
+  return request<{ ok: boolean; channel: 'telegram' | 'ntfy' }>('/api/v1/alerts/test', {
+    method: 'POST',
+    body: JSON.stringify({ clientId }),
+  });
+}
+
 export async function syncAlerts(
   clientId: string,
   alerts: Array<{

@@ -167,6 +167,25 @@ export function startTelegramPolling() {
   console.log('Telegram polling: on');
 }
 
+export async function sendTestAlert(clientId: string) {
+  const text = 'Тестовый алерт PauseTrader — всё работает!';
+  const chatId = getTelegramChatId(clientId);
+
+  if (chatId && BOT_TOKEN) {
+    const sent = await sendTelegramMessage(chatId, `🔔 <b>PauseTrader</b>\n${text}`);
+    if (sent) return { channel: 'telegram' as const };
+  }
+
+  const sent = await sendNtfyAlert(
+    ntfyTopicForClient(clientId),
+    'PauseTrader · тест',
+    text,
+  );
+  if (sent) return { channel: 'ntfy' as const };
+
+  throw new Error('Подключите Telegram или ntfy перед тестом');
+}
+
 export async function checkPriceAlerts() {
   const alerts = getActiveAlerts();
   if (alerts.length === 0) return;
