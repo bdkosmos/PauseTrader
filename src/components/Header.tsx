@@ -1,4 +1,5 @@
-import { ExternalLink, Maximize2, RefreshCw, TrendingUp } from 'lucide-react';
+import { Crown, ExternalLink, Maximize2, RefreshCw, TrendingUp } from 'lucide-react';
+import { PRO_PRICE, type PlanId } from '../lib/plans';
 import type { Timeframe } from '../types';
 
 const TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
@@ -15,9 +16,11 @@ interface HeaderProps {
   timeframe: Timeframe;
   loading: boolean;
   wsConnected: boolean;
+  plan: PlanId;
   onTimeframe: (tf: Timeframe) => void;
   onRefresh: () => void;
   onFullscreen: () => void;
+  onUpgrade: () => void;
 }
 
 export function Header({
@@ -31,9 +34,11 @@ export function Header({
   timeframe,
   loading,
   wsConnected,
+  plan,
   onTimeframe,
   onRefresh,
   onFullscreen,
+  onUpgrade,
 }: HeaderProps) {
   const fmt = (n: number) =>
     n < 1
@@ -99,6 +104,17 @@ export function Header({
       </div>
 
       <div className="tv-topbar-right">
+        {plan === 'pro' ? (
+          <span className="tv-plan-badge pro">
+            <Crown size={12} />
+            Pro
+          </span>
+        ) : (
+          <button type="button" className="tv-plan-badge free" onClick={onUpgrade}>
+            Free · Pro ${PRO_PRICE}/мес
+          </button>
+        )}
+
         <a
           href={BINANCE_REF_URL}
           target="_blank"

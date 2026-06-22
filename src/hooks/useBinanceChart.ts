@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  FREE_SYMBOLS,
+  getSymbolsForPlan,
+  PRO_SYMBOLS,
+  type PlanId,
+} from '../lib/plans';
 import type { Candle, SidebarItem, Timeframe } from '../types';
 
-export const SIDEBAR_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'TONUSDT'] as const;
+export { FREE_SYMBOLS, PRO_SYMBOLS };
 
 const LIMIT = 500;
 const WS_BASE = 'wss://stream.binance.com:9443/ws';
@@ -118,20 +124,23 @@ export function useBinanceChart(symbol: string, timeframe: Timeframe) {
   return { candles, loading, error, revision, wsConnected, refetch: fetchCandles };
 }
 
-export function useSidebarTickers() {
+export function useSidebarTickers(plan: PlanId) {
   const [items, setItems] = useState<SidebarItem[]>([]);
+  const [allItems, setAllItems] = useState<SidebarItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const symbols = getSymbolsForPlan(plan);
 
   useEffect(() => {
     const fetchTickers = async () => {
       try {
-        const symbols = JSON.stringify([...SIDEBAR_SYMBOLS]);
-        const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbols)}`;
+        const symbolsJson = JSON.stringify([...PRO_SYMBOLS]);
+        const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsJson)}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Ticker error');
 
         const data = await response.json();
-        const order = new Map(SIDEBAR_SYMBOLS.map((s, i) => [s, i]));
+        const order = new Map(PRO_SYMBOLS.map((s, i) => [s, i]));
 
         const list: SidebarItem[] = data.map((t: Record<string, string>) => ({
           symbol: t.symbol,
@@ -143,10 +152,15 @@ export function useSidebarTickers() {
           volume24h: parseFloat(t.quoteVolume),
         }));
 
-        list.sort((a, b) => (order.get(a.symbol as typeof SIDEBAR_SYMBOLS[number]) ?? 99)
-          - (order.get(b.symbol as typeof SIDEBAR_SYMBOLS[number]) ?? 99));
+        list.sort(
+          (a, b) =>
+            (order.get(a.symbol as (typeof PRO_SYMBOLS)[number]) ?? 99) -
+            (order.get(b.symbol as (typeof PRO_SYMBOLS)[number]) ?? 99),
+        );
 
-        setItems(list);
+        setAllItems(list);
+        const allowed = new Set(symbols);
+        setItems(list.filter((item) => allowed.has(item.symbol)));
       } catch (err) {
         console.error(err);
       } finally {
@@ -157,7 +171,7 @@ export function useSidebarTickers() {
     fetchTickers();
     const interval = setInterval(fetchTickers, 10_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [symbols]);
 
-  return { items, loading };
+  return { items, allItems, loading };
 }

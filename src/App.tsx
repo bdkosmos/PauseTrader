@@ -1,14 +1,22 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { IChartApi } from 'lightweight-charts';
 import { Header } from './components/Header';
 import { LeftToolbar, type Tool } from './components/LeftToolbar';
 import { OHLCPanel } from './components/OHLCPanel';
 import { PaperTradingPanel } from './components/PaperTradingPanel';
+import { PricingModal } from './components/PricingModal';
+import { ProPanel } from './components/ProPanel';
 import { Sidebar } from './components/Sidebar';
 import { TradingChart } from './components/TradingChart';
 import { useBinanceChart, useSidebarTickers } from './hooks/useBinanceChart';
 import { usePaperTrading } from './hooks/usePaperTrading';
-import type { CrosshairOHLC, Timeframe } from './types';
+import { useSubscription } from './hooks/useSubscription';
+import {
+  FREE_SYMBOLS,
+  getIndicatorsForPlan,
+  isSymbolAvailable,
+} from './lib/plans';
+import type { ChartTemplate, CrosshairOHLC, Timeframe } from './types';
 
 function App() {
   const [symbol, setSymbol] = useState('BTCUSDT');
@@ -20,18 +28,49 @@ function App() {
 
   const chartRef = useRef<IChartApi | null>(null);
 
+  const {
+    plan,
+    isPro,
+    pricingOpen,
+    openPricing,
+    closePricing,
+    activatePro,
+  } = useSubscription();
+
+  const indicators = useMemo(() => getIndicatorsForPlan(plan), [plan]);
+
   const { candles, loading, revision, wsConnected, refetch } = useBinanceChart(symbol, timeframe);
-  const { items: sidebarItems, loading: sidebarLoading } = useSidebarTickers();
+  const { items, allItems, loading: sidebarLoading } = useSidebarTickers(plan);
   const { portfolio, buy, sell, reset } = usePaperTrading();
 
   const current = useMemo(
-    () => sidebarItems.find((w) => w.symbol === symbol),
-    [sidebarItems, symbol],
+    () => allItems.find((w) => w.symbol === symbol) ?? items.find((w) => w.symbol === symbol),
+    [allItems, items, symbol],
   );
 
   const base = symbol.replace('USDT', '');
   const price = current?.price ?? candles.at(-1)?.close ?? 0;
   const change24h = current?.change24h ?? 0;
+
+  const handleSelectSymbol = useCallback(
+    (next: string) => {
+      if (!isSymbolAvailable(next, plan)) {
+        openPricing();
+        return;
+      }
+      setSymbol(next);
+    },
+    [plan, openPricing],
+  );
+
+  const handleApplyTemplate = useCallback((template: ChartTemplate) => {
+    if (!isSymbolAvailable(template.symbol, plan)) {
+      openPricing();
+      return;
+    }
+    setSymbol(template.symbol);
+    setTimeframe(template.timeframe);
+  }, [plan, openPricing]);
 
   const handleCrosshair = useCallback((data: CrosshairOHLC | null) => {
     setCrosshair(data);
@@ -68,6 +107,12 @@ function App() {
     [sell, symbol, base, price],
   );
 
+  useEffect(() => {
+    if (!isPro && !FREE_SYMBOLS.includes(symbol as (typeof FREE_SYMBOLS)[number])) {
+      setSymbol('BTCUSDT');
+    }
+  }, [isPro, symbol]);
+
   return (
     <div className="tv-app">
       <Header
@@ -81,9 +126,18 @@ function App() {
         timeframe={timeframe}
         loading={loading}
         wsConnected={wsConnected}
+        plan={plan}
         onTimeframe={setTimeframe}
         onRefresh={refetch}
         onFullscreen={fullscreen}
+        onUpgrade={openPricing}
+      />
+
+      <PricingModal
+        open={pricingOpen}
+        plan={plan}
+        onClose={closePricing}
+        onActivateDemo={activatePro}
       />
 
       <div className="tv-workspace">
@@ -98,9 +152,12 @@ function App() {
         {sidebarOpen && (
           <div className="tv-watchlist-panel">
             <Sidebar
-              items={sidebarItems}
+              items={items}
+              allItems={allItems}
               selected={symbol}
-              onSelect={setSymbol}
+              isPro={isPro}
+              onSelect={handleSelectSymbol}
+              onLockedSelect={openPricing}
               loading={sidebarLoading}
             />
           </div>
@@ -118,6 +175,7 @@ function App() {
           <TradingChart
             candles={candles}
             revision={revision}
+            indicators={indicators}
             activeTool={activeTool}
             isLoading={loading}
             onCrosshair={handleCrosshair}
@@ -135,12 +193,24 @@ function App() {
 
         {tradingOpen && (
           <div className="tv-trading-panel">
+            <ProPanel
+              isPro={isPro}
+              items={allItems}
+              symbol={symbol}
+              base={base}
+              price={price}
+              timeframe={timeframe}
+              selected={symbol}
+              onSelectSymbol={handleSelectSymbol}
+              onApplyTemplate={handleApplyTemplate}
+              onUpgrade={openPricing}
+            />
             <PaperTradingPanel
               symbol={symbol}
               base={base}
               price={price}
               portfolio={portfolio}
-              watchlist={sidebarItems}
+              watchlist={items}
               onBuy={handleBuy}
               onSell={handleSell}
               onReset={reset}

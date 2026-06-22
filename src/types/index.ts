@@ -54,3 +54,20 @@ export interface PaperAccount {
   positions: PaperPosition[];
   trades: PaperTrade[];
 }
+
+export interface PriceAlert {
+  id: string;
+  symbol: string;
+  base: string;
+  price: number;
+  direction: 'above' | 'below';
+  createdAt: number;
+}
+
+export interface ChartTemplate {
+  id: string;
+  name: string;
+  symbol: string;
+  timeframe: Timeframe;
+  createdAt: number;
+}
