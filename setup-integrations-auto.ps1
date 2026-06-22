@@ -36,8 +36,10 @@ function Get-StripeApiKey {
         if ($toml -match 'test_mode_api_key\s*=\s*"([^"]+)"') { return $Matches[1] }
         if ($toml -match 'test_mode_api_key\s*=\s*(\S+)') { return $Matches[1] }
     }
-    $cfg = & $StripeExe config --list 2>$null | Out-String
-    if ($cfg -match 'test_mode_api_key\s*=\s*(\S+)') { return $Matches[1] }
+    try {
+        $cfg = & $StripeExe config --list 2>$null | Out-String
+        if ($cfg -match 'test_mode_api_key\s*=\s*(\S+)') { return $Matches[1] }
+    } catch {}
     return $null
 }
 
@@ -51,15 +53,17 @@ function Initialize-Stripe {
     if (-not $apiKey) {
         Write-Host 'Stripe login required — opening browser...' -ForegroundColor Yellow
         Start-Process 'https://dashboard.stripe.com/register'
-        $login = & $StripeExe login --interactive 2>&1 | Out-String
-        if ($login -match 'browser_url":\s*"([^"]+)"') {
-            Start-Process $Matches[1]
-        }
-        for ($i = 0; $i -lt 36; $i++) {
+        try {
+            $login = & $StripeExe login --interactive 2>&1 | Out-String
+            if ($login -match 'browser_url":\s*"([^"]+)"') {
+                Start-Process $Matches[1]
+            }
+        } catch {}
+        for ($i = 0; $i -lt 6; $i++) {
             Start-Sleep -Seconds 5
             $apiKey = Get-StripeApiKey
             if ($apiKey) { break }
-            Write-Host "  waiting Stripe auth... $($i + 1)/36"
+            Write-Host "  waiting Stripe auth... $($i + 1)/6"
         }
     }
 
