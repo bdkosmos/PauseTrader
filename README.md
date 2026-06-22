@@ -7,7 +7,7 @@
 
 ## Онлайн
 
-https://aiktg.github.io/PauseTrader/
+https://bdkosmos.github.io/PauseTrader/
 
 ## Локально
 

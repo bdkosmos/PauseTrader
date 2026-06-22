@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:pages": "vite build",
+    "preview": "vite preview --host"
   },
   "dependencies": {
     "clsx": "^2.1.1",
