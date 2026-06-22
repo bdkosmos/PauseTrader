@@ -10,3 +10,7 @@ server/node_modules/
 server/data/
 server/.env
 tools/render/
+tools/stripe/
+tools/.telegram-token
+tools/.stripe-keys.json
+pausetrader-bot-setup.session

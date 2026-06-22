@@ -1,9 +1,23 @@
 import { getActiveAlerts, getTelegramChatId, markAlertTriggered } from './db.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const NTFY_BASE = (process.env.NTFY_BASE_URL ?? 'https://ntfy.sh').replace(/\/$/, '');
 
 export function telegramEnabled() {
   return Boolean(BOT_TOKEN);
+}
+
+export function ntfyEnabled() {
+  return true;
+}
+
+export function ntfyTopicForClient(clientId: string) {
+  const slug = clientId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 24).toLowerCase();
+  return `pausetrader-${slug || 'alerts'}`;
+}
+
+export function ntfyUrlForClient(clientId: string) {
+  return `${NTFY_BASE}/${ntfyTopicForClient(clientId)}`;
 }
 
 export async function sendTelegramMessage(chatId: string, text: string) {
@@ -47,9 +61,55 @@ export async function handleTelegramUpdate(update: Record<string, unknown>) {
   }
 }
 
-export async function checkPriceAlerts() {
-  if (!BOT_TOKEN) return;
+export async function sendNtfyAlert(topic: string, title: string, message: string) {
+  const res = await fetch(`${NTFY_BASE}/${topic}`, {
+    method: 'POST',
+    headers: {
+      Title: title,
+      Priority: 'high',
+      Tags: 'chart,moneybag',
+    },
+    body: message,
+  });
+  return res.ok;
+}
 
+let polling = false;
+let pollOffset = 0;
+
+export function startTelegramPolling() {
+  if (!BOT_TOKEN || polling) return;
+  polling = true;
+
+  const poll = async () => {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?timeout=25&offset=${pollOffset}`,
+      );
+      if (!res.ok) return;
+
+      const data = (await res.json()) as {
+        ok: boolean;
+        result: Array<{ update_id: number; message?: Record<string, unknown> }>;
+      };
+      if (!data.ok) return;
+
+      for (const update of data.result) {
+        pollOffset = update.update_id + 1;
+        if (update.message) await handleTelegramUpdate({ message: update.message });
+      }
+    } catch (err) {
+      console.error('Telegram poll:', err);
+    } finally {
+      setTimeout(poll, 1500);
+    }
+  };
+
+  void poll();
+  console.log('Telegram polling: on');
+}
+
+export async function checkPriceAlerts() {
   const alerts = getActiveAlerts();
   if (alerts.length === 0) return;
 
@@ -72,14 +132,25 @@ export async function checkPriceAlerts() {
 
     if (!hit) continue;
 
-    const chatId = getTelegramChatId(alert.client_id);
-    if (!chatId) continue;
-
     const arrow = alert.direction === 'above' ? '▲' : '▼';
-    const sent = await sendTelegramMessage(
-      chatId,
-      `🔔 <b>PauseTrader</b>\n${alert.base}/USDT ${arrow} ${alert.price}\nТекущая: <b>${current}</b>`,
-    );
+    const text = `${alert.base}/USDT ${arrow} ${alert.price}\nТекущая: ${current}`;
+    let sent = false;
+
+    const chatId = getTelegramChatId(alert.client_id);
+    if (chatId && BOT_TOKEN) {
+      sent = await sendTelegramMessage(
+        chatId,
+        `🔔 <b>PauseTrader</b>\n${text}`,
+      );
+    }
+
+    if (!sent) {
+      sent = await sendNtfyAlert(
+        ntfyTopicForClient(alert.client_id),
+        `PauseTrader · ${alert.base}`,
+        text,
+      );
+    }
 
     if (sent) markAlertTriggered(alert.id);
   }

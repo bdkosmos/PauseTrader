@@ -26,6 +26,7 @@ export function TelegramAlerts({ clientId, symbol, base, price }: TelegramAlerts
   const [targetPrice, setTargetPrice] = useState('');
   const [direction, setDirection] = useState<'above' | 'below'>('above');
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null);
+  const [ntfyUrl, setNtfyUrl] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,8 +36,14 @@ export function TelegramAlerts({ clientId, symbol, base, price }: TelegramAlerts
   useEffect(() => {
     if (!apiEnabled()) return;
     getTelegramLinkUrl(clientId)
-      .then((data) => setTelegramUrl(data.enabled ? data.url : null))
-      .catch(() => setTelegramUrl(null));
+      .then((data) => {
+        setTelegramUrl(data.enabled ? data.url : null);
+        setNtfyUrl(data.ntfyEnabled ? data.ntfyUrl : null);
+      })
+      .catch(() => {
+        setTelegramUrl(null);
+        setNtfyUrl(null);
+      });
   }, [clientId]);
 
   const pushToServer = useCallback(
@@ -86,19 +93,29 @@ export function TelegramAlerts({ clientId, symbol, base, price }: TelegramAlerts
         <span className="pro-feature-badge">Pro</span>
       </div>
 
-      {telegramUrl ? (
-        <a
-          href={telegramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="telegram-link-btn"
-        >
-          <Link2 size={14} />
-          Подключить Telegram
-        </a>
-      ) : (
+      <div className="alert-links">
+        {telegramUrl ? (
+          <a
+            href={telegramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="telegram-link-btn"
+          >
+            <Link2 size={14} />
+            Подключить Telegram
+          </a>
+        ) : null}
+        {ntfyUrl ? (
+          <a href={ntfyUrl} target="_blank" rel="noopener noreferrer" className="telegram-link-btn">
+            <Bell size={14} />
+            Алерты через ntfy
+          </a>
+        ) : null}
+      </div>
+      {!telegramUrl && ntfyUrl && (
         <p className="pro-feature-desc">
-          Настройте TELEGRAM_BOT_TOKEN на сервере для push-уведомлений.
+          Откройте ссылку ntfy на телефоне — push придёт без бота. Telegram-бот подключится автоматически
+          после настройки.
         </p>
       )}
 

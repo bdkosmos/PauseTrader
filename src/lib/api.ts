@@ -66,6 +66,8 @@ export async function activateLicense(
 export async function getTelegramLinkUrl(clientId: string): Promise<{
   url: string;
   enabled: boolean;
+  ntfyUrl: string;
+  ntfyEnabled: boolean;
 }> {
   return request(`/api/v1/telegram/link-url?clientId=${encodeURIComponent(clientId)}`);
 }

@@ -9,7 +9,14 @@ import {
   saveAlert,
 } from './db.js';
 import { createCheckoutSession, handleStripeWebhook, stripeEnabled } from './stripe.js';
-import { checkPriceAlerts, handleTelegramUpdate, telegramEnabled } from './telegram.js';
+import {
+  checkPriceAlerts,
+  handleTelegramUpdate,
+  ntfyEnabled,
+  ntfyUrlForClient,
+  startTelegramPolling,
+  telegramEnabled,
+} from './telegram.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
@@ -58,6 +65,7 @@ app.get('/api/v1/health', (_req, res) => {
     ok: true,
     stripe: stripeEnabled(),
     telegram: telegramEnabled(),
+    ntfy: ntfyEnabled(),
   });
 });
 
@@ -133,10 +141,12 @@ app.get('/api/v1/telegram/link-url', (req, res) => {
   const clientId = String(req.query.clientId ?? '');
   if (!clientId) return res.status(400).json({ error: 'clientId обязателен' });
 
-  const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'AiKtg';
+  const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'PauseTraderAlertsBot';
   res.json({
     url: `https://t.me/${botUsername}?start=${clientId}`,
     enabled: telegramEnabled(),
+    ntfyUrl: ntfyUrlForClient(clientId),
+    ntfyEnabled: ntfyEnabled(),
   });
 });
 
@@ -200,4 +210,6 @@ app.listen(PORT, () => {
   console.log(`Frontend URL: ${APP_URL}`);
   console.log(`Stripe: ${stripeEnabled() ? 'on' : 'off'}`);
   console.log(`Telegram: ${telegramEnabled() ? 'on' : 'off'}`);
+  console.log(`Ntfy: ${ntfyEnabled() ? 'on' : 'off'}`);
+  startTelegramPolling();
 });

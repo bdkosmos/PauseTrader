@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "license": "tsx scripts/generate-license.ts",
+    "license:remote": "tsx scripts/generate-license-remote.ts",
     "grant": "tsx scripts/grant-pro.ts"
   },
   "dependencies": {
