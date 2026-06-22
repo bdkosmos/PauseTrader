@@ -1,83 +1,119 @@
-import { ArrowUpDown } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import type { SidebarItem } from '../types';
-
-type SortKey = 'change24h' | 'volume24h' | 'price';
+import { Flame, RefreshCw, Rocket, TrendingUp, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { useMarketScreener } from '../hooks/useMarketScreener';
+import { fmtListedDays, fmtPct, fmtPrice, fmtVolRatio } from '../lib/screener';
+import type { ScreenerCategory, ScreenerRow } from '../types';
 
 interface CoinScreenerProps {
-  items: SidebarItem[];
+  enabled: boolean;
   selected: string;
   onSelect: (symbol: string) => void;
 }
 
-export function CoinScreener({ items, selected, onSelect }: CoinScreenerProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('change24h');
-  const [desc, setDesc] = useState(true);
+const CATEGORIES: {
+  id: ScreenerCategory;
+  label: string;
+  hint: string;
+  icon: typeof Flame;
+}[] = [
+  { id: 'gainers1h', label: 'Рост 1ч', hint: 'Топ роста за последний час', icon: Rocket },
+  { id: 'volumeSpike', label: 'Объём', hint: 'Всплески объёма vs средний час', icon: Zap },
+  { id: 'trend', label: 'Тренд', hint: 'Сильные тренды 1ч + 4ч', icon: TrendingUp },
+  { id: 'newListing', label: 'Новые', hint: 'Листинги за 60 дней', icon: Flame },
+];
 
-  const sorted = useMemo(() => {
-    const list = [...items];
-    list.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      return desc ? bv - av : av - bv;
-    });
-    return list;
-  }, [items, sortKey, desc]);
+function metricFor(category: ScreenerCategory, row: ScreenerRow) {
+  switch (category) {
+    case 'gainers1h':
+      return { value: fmtPct(row.change1h), cls: row.change1h >= 0 ? 'up' : 'down' };
+    case 'volumeSpike':
+      return { value: fmtVolRatio(row.volumeRatio), cls: 'hot' };
+    case 'trend':
+      return { value: fmtPct(row.change4h), cls: row.change4h >= 0 ? 'up' : 'down' };
+    case 'newListing':
+      return { value: fmtListedDays(row.listedAt), cls: 'new' };
+  }
+}
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setDesc(!desc);
-    else {
-      setSortKey(key);
-      setDesc(true);
-    }
-  };
+export function CoinScreener({ enabled, selected, onSelect }: CoinScreenerProps) {
+  const [category, setCategory] = useState<ScreenerCategory>('gainers1h');
+  const { data, loading, error, refresh } = useMarketScreener(enabled);
 
-  const fmtPrice = (n: number) =>
-    n < 1 ? n.toFixed(6) : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const rows = data?.[category] ?? [];
+  const active = CATEGORIES.find((c) => c.id === category)!;
 
   return (
     <div className="pro-feature screener">
       <div className="pro-feature-head">
-        <h3>Скринер монет</h3>
-        <span className="pro-feature-badge">Pro</span>
+        <h3>Скринер рынка</h3>
+        <div className="screener-head-actions">
+          <span className="pro-feature-badge">Pro</span>
+          <button
+            type="button"
+            className="screener-refresh"
+            onClick={() => void refresh()}
+            disabled={loading}
+            title="Обновить"
+          >
+            <RefreshCw size={12} className={loading ? 'spin' : ''} />
+          </button>
+        </div>
       </div>
 
+      <p className="pro-feature-desc">{active.hint}</p>
+
       <div className="screener-filters">
-        {([
-          ['change24h', '24ч %'],
-          ['volume24h', 'Объём'],
-          ['price', 'Цена'],
-        ] as [SortKey, string][]).map(([key, label]) => (
+        {CATEGORIES.map(({ id, label, icon: Icon }) => (
           <button
-            key={key}
+            key={id}
             type="button"
-            className={sortKey === key ? 'active' : ''}
-            onClick={() => toggleSort(key)}
+            className={category === id ? 'active' : ''}
+            onClick={() => setCategory(id)}
           >
-            <ArrowUpDown size={12} />
+            <Icon size={11} />
             {label}
           </button>
         ))}
       </div>
 
+      {error && <p className="screener-error">{error}</p>}
+
       <div className="screener-list">
-        {sorted.map((item, i) => (
-          <button
-            key={item.symbol}
-            type="button"
-            className={`screener-row ${selected === item.symbol ? 'active' : ''}`}
-            onClick={() => onSelect(item.symbol)}
-          >
-            <span className="screener-rank">{i + 1}</span>
-            <span className="screener-symbol">{item.base}</span>
-            <span className="screener-price">{fmtPrice(item.price)}</span>
-            <span className={`screener-change ${item.change24h >= 0 ? 'up' : 'down'}`}>
-              {item.change24h >= 0 ? '+' : ''}
-              {item.change24h.toFixed(2)}%
-            </span>
-          </button>
-        ))}
+        {loading && rows.length === 0 && (
+          <p className="pro-empty">Сканируем {data?.scanned ?? 55} пар…</p>
+        )}
+
+        {!loading && rows.length === 0 && !error && (
+          <p className="pro-empty">Нет сигналов в этой категории</p>
+        )}
+
+        {rows.map((row, i) => {
+          const metric = metricFor(category, row);
+          return (
+            <button
+              key={row.symbol}
+              type="button"
+              className={`screener-row ${selected === row.symbol ? 'active' : ''}`}
+              onClick={() => onSelect(row.symbol)}
+            >
+              <span className="screener-rank">{i + 1}</span>
+              <span className="screener-symbol">{row.base}</span>
+              <span className="screener-price">{fmtPrice(row.price)}</span>
+              <span className={`screener-change ${metric.cls}`}>{metric.value}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {data && (
+        <p className="screener-meta">
+          {data.scanned} пар · обновлено{' '}
+          {new Date(data.updatedAt).toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </p>
+      )}
     </div>
   );
 }

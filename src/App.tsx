@@ -210,7 +210,6 @@ function App() {
               clientId={clientId}
               hasTelegram={subStatus?.hasTelegram ?? false}
               onAlertsRefresh={refreshSubscription}
-              items={allItems}
               symbol={symbol}
               base={base}
               price={price}

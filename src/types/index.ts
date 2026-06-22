@@ -71,3 +71,27 @@ export interface ChartTemplate {
   timeframe: Timeframe;
   createdAt: number;
 }
+
+export type ScreenerCategory = 'gainers1h' | 'volumeSpike' | 'trend' | 'newListing';
+
+export interface ScreenerRow {
+  symbol: string;
+  base: string;
+  price: number;
+  change1h: number;
+  change4h: number;
+  change24h: number;
+  volume24h: number;
+  volumeRatio: number;
+  listedAt?: number;
+  score: number;
+}
+
+export interface ScreenerSnapshot {
+  gainers1h: ScreenerRow[];
+  volumeSpike: ScreenerRow[];
+  trend: ScreenerRow[];
+  newListing: ScreenerRow[];
+  updatedAt: number;
+  scanned: number;
+}

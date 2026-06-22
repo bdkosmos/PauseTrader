@@ -1,6 +1,6 @@
 import { Bell, Bookmark, Crown, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
-import type { ChartTemplate, SidebarItem, Timeframe } from '../types';
+import type { ChartTemplate, Timeframe } from '../types';
 import { ChartTemplates } from './ChartTemplates';
 import { CoinScreener } from './CoinScreener';
 import { TelegramAlerts } from './TelegramAlerts';
@@ -12,7 +12,6 @@ interface ProPanelProps {
   clientId: string;
   hasTelegram: boolean;
   onAlertsRefresh?: () => void;
-  items: SidebarItem[];
   symbol: string;
   base: string;
   price: number;
@@ -34,7 +33,6 @@ export function ProPanel({
   clientId,
   hasTelegram,
   onAlertsRefresh,
-  items,
   symbol,
   base,
   price,
@@ -68,7 +66,7 @@ export function ProPanel({
           <div className="pro-locked-overlay">
             <Crown size={28} />
             <h3>Pro — $2/мес</h3>
-            <p>Скринер, алерты в Telegram, шаблоны и все монеты</p>
+            <p>Скринер рынка, алерты, шаблоны и все монеты Binance</p>
             <button type="button" className="pricing-cta" onClick={onUpgrade}>
               Получить Pro
             </button>
@@ -76,7 +74,7 @@ export function ProPanel({
         )}
 
         {isPro && tab === 'screener' && (
-          <CoinScreener items={items} selected={selected} onSelect={onSelectSymbol} />
+          <CoinScreener enabled={isPro} selected={selected} onSelect={onSelectSymbol} />
         )}
         {isPro && tab === 'alerts' && (
           <TelegramAlerts

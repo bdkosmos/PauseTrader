@@ -34,10 +34,10 @@ export const FREE_FEATURES = [
 ] as const;
 
 export const PRO_FEATURES = [
-  'Неограниченные монеты (15+)',
-  'Сохранение шаблонов графика',
+  'Все монеты Binance USDT',
+  'Скринер: рост 1ч, объём, тренды, листинги',
   'Алерты в Telegram',
-  'Скринер монет',
+  'Сохранение шаблонов графика',
   'Доп. индикаторы: EMA 50, EMA 200, MACD',
 ] as const;
 
@@ -77,5 +77,6 @@ export function getIndicatorsForPlan(plan: PlanId): IndicatorConfig {
 }
 
 export function isSymbolAvailable(symbol: string, plan: PlanId): boolean {
+  if (plan === 'pro') return /^[A-Z0-9]{2,12}USDT$/.test(symbol);
   return getSymbolsForPlan(plan).includes(symbol);
 }
