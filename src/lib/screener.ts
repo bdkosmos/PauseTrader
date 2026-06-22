@@ -31,10 +31,7 @@ interface Ticker24h {
   quoteVolume: string;
 }
 
-interface SymbolInfo {
-  symbol: string;
-  onboardDate?: number;
-}
+
 
 function isTradableUsdt(symbol: string) {
   if (!symbol.endsWith('USDT')) return false;
@@ -64,13 +61,28 @@ async function mapPool<T, R>(
   return out;
 }
 
-async function fetchKlines(symbol: string, limit = 25): Promise<RawKline[] | null> {
+async function fetchKlines(
+  symbol: string,
+  interval: '1h' | '1d' = '1h',
+  limit = 25,
+): Promise<RawKline[] | null> {
   try {
-    const res = await fetch(`${API}/klines?symbol=${symbol}&interval=1h&limit=${limit}`);
+    const res = await fetch(`${API}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
     if (!res.ok) return null;
     return (await res.json()) as RawKline[];
   } catch {
     return null;
+  }
+}
+
+async function fetchListingDate(symbol: string): Promise<number | undefined> {
+  try {
+    const res = await fetch(`${API}/klines?symbol=${symbol}&interval=1d&limit=1&startTime=0`);
+    if (!res.ok) return undefined;
+    const klines = (await res.json()) as RawKline[];
+    return klines[0]?.[0];
+  } catch {
+    return undefined;
   }
 }
 
@@ -163,52 +175,46 @@ function rankNewListings(rows: Omit<ScreenerRow, 'score'>[]): ScreenerRow[] {
     }));
 }
 
-let exchangeCache: { at: number; map: Map<string, number> } | null = null;
-
-async function getListingDates(): Promise<Map<string, number>> {
-  if (exchangeCache && Date.now() - exchangeCache.at < 3_600_000) {
-    return exchangeCache.map;
-  }
-
-  const res = await fetch(`${API}/exchangeInfo`);
-  if (!res.ok) return new Map();
-
-  const data = (await res.json()) as { symbols: SymbolInfo[] };
-  const map = new Map<string, number>();
-
-  for (const s of data.symbols) {
-    if (s.onboardDate) map.set(s.symbol, s.onboardDate);
-  }
-
-  exchangeCache = { at: Date.now(), map };
-  return map;
-}
-
 export async function fetchMarketScreener(): Promise<ScreenerSnapshot> {
-  const [tickerRes, listingDates] = await Promise.all([
-    fetch(`${API}/ticker/24hr`),
-    getListingDates(),
-  ]);
-
+  const tickerRes = await fetch(`${API}/ticker/24hr`);
   if (!tickerRes.ok) throw new Error('Не удалось загрузить рынок');
 
-  const tickers = ((await tickerRes.json()) as Ticker24h[])
-    .filter((t) => isTradableUsdt(t.symbol))
+  const allUsdt = ((await tickerRes.json()) as Ticker24h[]).filter((t) =>
+    isTradableUsdt(t.symbol),
+  );
+
+  const tickers = allUsdt
     .filter((t) => parseFloat(t.quoteVolume) >= MIN_QUOTE_VOL)
     .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
     .slice(0, SCAN_POOL);
 
+  const listingCandidates = allUsdt
+    .filter((t) => {
+      const vol = parseFloat(t.quoteVolume);
+      return vol >= 30_000 && vol <= 8_000_000;
+    })
+    .sort((a, b) => parseFloat(a.quoteVolume) - parseFloat(b.quoteVolume))
+    .slice(0, 28);
+
   const analyzed = await mapPool(tickers, async (ticker) => {
-    const klines = await fetchKlines(ticker.symbol);
+    const klines = await fetchKlines(ticker.symbol, '1h', 25);
     if (!klines) return null;
-    return analyzeSymbol(ticker, klines, listingDates.get(ticker.symbol));
+    return analyzeSymbol(ticker, klines);
+  });
+
+  const listingRows = await mapPool(listingCandidates, async (ticker) => {
+    const listedAt = await fetchListingDate(ticker.symbol);
+    if (!listedAt) return null;
+    const klines = await fetchKlines(ticker.symbol, '1h', 25);
+    if (!klines) return null;
+    return analyzeSymbol(ticker, klines, listedAt);
   });
 
   return {
     gainers1h: rankGainers(analyzed),
     volumeSpike: rankVolumeSpikes(analyzed),
     trend: rankTrends(analyzed),
-    newListing: rankNewListings(analyzed),
+    newListing: rankNewListings(listingRows),
     updatedAt: Date.now(),
     scanned: tickers.length,
   };
