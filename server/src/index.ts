@@ -8,7 +8,12 @@ import {
   grantPro,
   saveAlert,
 } from './db.js';
-import { createCheckoutSession, handleStripeWebhook, stripeEnabled } from './stripe.js';
+import {
+  createCheckoutSession,
+  handleStripeWebhook,
+  stripeEnabled,
+  verifyCheckoutSession,
+} from './stripe.js';
 import {
   checkPriceAlerts,
   handleTelegramUpdate,
@@ -75,6 +80,23 @@ app.get('/api/v1/subscription/status', (req, res) => {
     return res.status(400).json({ error: 'clientId обязателен' });
   }
   res.json(getSubscriptionStatus(clientId));
+});
+
+app.post('/api/v1/checkout/verify', async (req, res) => {
+  try {
+    const { clientId, sessionId } = req.body as { clientId?: string; sessionId?: string };
+    if (!clientId || !sessionId) {
+      return res.status(400).json({ error: 'clientId и sessionId обязательны' });
+    }
+
+    const status = await verifyCheckoutSession(clientId, sessionId);
+    res.json(status);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({
+      error: err instanceof Error ? err.message : 'Не удалось подтвердить оплату',
+    });
+  }
 });
 
 app.post('/api/v1/checkout/create', async (req, res) => {

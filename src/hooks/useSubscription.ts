@@ -4,6 +4,7 @@ import {
   apiEnabled,
   createCheckout,
   fetchSubscription,
+  verifyCheckout,
   type SubscriptionStatus,
 } from '../lib/api';
 import { getClientId } from '../lib/clientId';
@@ -43,13 +44,30 @@ export function useSubscription() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success') {
-      refresh();
-      params.delete('checkout');
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
-      window.history.replaceState({}, '', next);
-    }
-  }, [refresh]);
+    if (params.get('checkout') !== 'success') return;
+
+    const sessionId = params.get('session_id');
+    params.delete('checkout');
+    params.delete('session_id');
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+    window.history.replaceState({}, '', next);
+
+    const finalize = async () => {
+      try {
+        if (sessionId && apiEnabled()) {
+          const data = await verifyCheckout(clientId, sessionId);
+          setStatus(data);
+          setPlan(data.plan);
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Ошибка подтверждения оплаты');
+      }
+      await refresh();
+    };
+
+    void finalize();
+  }, [clientId, refresh]);
 
   const isPro = plan === 'pro';
 

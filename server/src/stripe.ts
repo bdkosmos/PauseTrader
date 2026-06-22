@@ -29,9 +29,8 @@ export async function createCheckoutSession(
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
+    success_url: `${successUrl}${successUrl.includes('?') ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
     client_reference_id: clientId,
     metadata: { clientId },
@@ -42,6 +41,36 @@ export async function createCheckoutSession(
 
   if (!session.url) throw new Error('Не удалось создать сессию оплаты');
   return session.url;
+}
+
+export async function verifyCheckoutSession(clientId: string, sessionId: string) {
+  if (!stripe) throw new Error('Stripe не настроен');
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['subscription'],
+  });
+
+  const ownerId = session.client_reference_id ?? session.metadata?.clientId;
+  if (!ownerId || ownerId !== clientId) {
+    throw new Error('Сессия не принадлежит этому устройству');
+  }
+
+  if (session.status !== 'complete' || session.payment_status !== 'paid') {
+    throw new Error('Оплата ещё не завершена');
+  }
+
+  const subscription = session.subscription;
+  if (!subscription || typeof subscription === 'string') {
+    throw new Error('Подписка не найдена');
+  }
+
+  return setStripeSubscription(
+    clientId,
+    String(session.customer),
+    subscription.id,
+    subscription.current_period_end * 1000,
+    session.customer_details?.email ?? undefined,
+  );
 }
 
 export async function handleStripeWebhook(

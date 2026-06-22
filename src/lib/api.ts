@@ -53,6 +53,16 @@ export async function createCheckout(clientId: string): Promise<string> {
   return data.url;
 }
 
+export async function verifyCheckout(
+  clientId: string,
+  sessionId: string,
+): Promise<SubscriptionStatus> {
+  return request<SubscriptionStatus>('/api/v1/checkout/verify', {
+    method: 'POST',
+    body: JSON.stringify({ clientId, sessionId }),
+  });
+}
+
 export async function activateLicense(
   clientId: string,
   licenseKey: string,
