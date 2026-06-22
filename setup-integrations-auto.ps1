@@ -108,12 +108,14 @@ function Initialize-TelegramBot {
     Write-Host 'Creating Telegram bot...' -ForegroundColor Cyan
     $py = Join-Path $ProjectDir 'tools\create-telegram-bot.py'
     if (Test-Path $py) {
-        $out = python $py 2>&1 | Out-String
-        if ($out -match 'TELEGRAM_BOT_TOKEN=(\S+)') {
-            $token = $Matches[1]
-            Set-Content $TokenFile $token -NoNewline -Encoding UTF8
-            return $token
-        }
+        try {
+            $out = python $py 2>&1 | Out-String
+            if ($out -match 'TELEGRAM_BOT_TOKEN=(\S+)') {
+                $token = $Matches[1]
+                Set-Content $TokenFile $token -NoNewline -Encoding UTF8
+                return $token
+            }
+        } catch {}
     }
 
     Write-Host 'Telegram not logged in — open BotFather' -ForegroundColor Yellow
