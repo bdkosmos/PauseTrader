@@ -7,10 +7,9 @@ export interface Candle {
   volume: number;
 }
 
-export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
-export type ChartType = 'candles' | 'line' | 'area';
+export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
-export interface WatchlistItem {
+export interface SidebarItem {
   symbol: string;
   base: string;
   price: number;
@@ -18,15 +17,6 @@ export interface WatchlistItem {
   high24h: number;
   low24h: number;
   volume24h: number;
-}
-
-export interface IndicatorState {
-  volume: boolean;
-  ema9: boolean;
-  ema21: boolean;
-  ema50: boolean;
-  rsi: boolean;
-  macd: boolean;
 }
 
 export interface CrosshairOHLC {

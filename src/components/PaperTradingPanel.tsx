@@ -4,14 +4,14 @@ import {
   calcPaperEquity,
   calcUnrealizedPnl,
 } from '../hooks/usePaperTrading';
-import type { OrderSide, PaperAccount, WatchlistItem } from '../types';
+import type { OrderSide, PaperAccount, SidebarItem } from '../types';
 
 interface PaperTradingPanelProps {
   symbol: string;
   base: string;
   price: number;
   portfolio: PaperAccount & { startingBalance: number };
-  watchlist: WatchlistItem[];
+  watchlist: SidebarItem[];
   onBuy: (usdtAmount: number) => { ok: boolean; error?: string };
   onSell: (quantity: number) => { ok: boolean; error?: string };
   onReset: () => void;

@@ -1,52 +1,37 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { IChartApi } from 'lightweight-charts';
+import { Header } from './components/Header';
 import { LeftToolbar, type Tool } from './components/LeftToolbar';
 import { OHLCPanel } from './components/OHLCPanel';
 import { PaperTradingPanel } from './components/PaperTradingPanel';
-import { TopBar } from './components/TopBar';
+import { Sidebar } from './components/Sidebar';
 import { TradingChart } from './components/TradingChart';
-import { Watchlist } from './components/Watchlist';
-import { useBinanceChart, useWatchlist } from './hooks/useBinanceChart';
+import { useBinanceChart, useSidebarTickers } from './hooks/useBinanceChart';
 import { usePaperTrading } from './hooks/usePaperTrading';
-import type { ChartType, CrosshairOHLC, IndicatorState, Timeframe } from './types';
-
-const DEFAULT_INDICATORS: IndicatorState = {
-  volume: true,
-  ema9: true,
-  ema21: true,
-  ema50: false,
-  rsi: true,
-  macd: false,
-};
+import type { CrosshairOHLC, Timeframe } from './types';
 
 function App() {
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [timeframe, setTimeframe] = useState<Timeframe>('1h');
-  const [chartType, setChartType] = useState<ChartType>('candles');
-  const [indicators, setIndicators] = useState<IndicatorState>(DEFAULT_INDICATORS);
   const [activeTool, setActiveTool] = useState<Tool>('crosshair');
-  const [watchlistOpen, setWatchlistOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tradingOpen, setTradingOpen] = useState(true);
   const [crosshair, setCrosshair] = useState<CrosshairOHLC | null>(null);
 
   const chartRef = useRef<IChartApi | null>(null);
 
-  const { candles, loading, refetch } = useBinanceChart(symbol, timeframe);
-  const { items: watchlist, loading: wlLoading } = useWatchlist();
+  const { candles, loading, revision, wsConnected, refetch } = useBinanceChart(symbol, timeframe);
+  const { items: sidebarItems, loading: sidebarLoading } = useSidebarTickers();
   const { portfolio, buy, sell, reset } = usePaperTrading();
 
   const current = useMemo(
-    () => watchlist.find((w) => w.symbol === symbol),
-    [watchlist, symbol],
+    () => sidebarItems.find((w) => w.symbol === symbol),
+    [sidebarItems, symbol],
   );
 
   const base = symbol.replace('USDT', '');
   const price = current?.price ?? candles.at(-1)?.close ?? 0;
   const change24h = current?.change24h ?? 0;
-
-  const toggleIndicator = (key: keyof IndicatorState) => {
-    setIndicators((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const handleCrosshair = useCallback((data: CrosshairOHLC | null) => {
     setCrosshair(data);
@@ -85,7 +70,7 @@ function App() {
 
   return (
     <div className="tv-app">
-      <TopBar
+      <Header
         symbol={symbol}
         base={base}
         price={price}
@@ -94,31 +79,29 @@ function App() {
         low24h={current?.low24h ?? 0}
         volume24h={current?.volume24h ?? 0}
         timeframe={timeframe}
-        chartType={chartType}
-        indicators={indicators}
         loading={loading}
+        wsConnected={wsConnected}
         onTimeframe={setTimeframe}
-        onChartType={setChartType}
-        onIndicator={toggleIndicator}
         onRefresh={refetch}
         onFullscreen={fullscreen}
       />
 
       <div className="tv-workspace">
         <button
+          type="button"
           className="tv-watchlist-toggle"
-          onClick={() => setWatchlistOpen(!watchlistOpen)}
+          onClick={() => setSidebarOpen(!sidebarOpen)}
         >
-          {watchlistOpen ? '◀' : '▶'}
+          {sidebarOpen ? '◀' : '▶'}
         </button>
 
-        {watchlistOpen && (
+        {sidebarOpen && (
           <div className="tv-watchlist-panel">
-            <Watchlist
-              items={watchlist}
+            <Sidebar
+              items={sidebarItems}
               selected={symbol}
               onSelect={setSymbol}
-              loading={wlLoading}
+              loading={sidebarLoading}
             />
           </div>
         )}
@@ -134,8 +117,7 @@ function App() {
 
           <TradingChart
             candles={candles}
-            chartType={chartType}
-            indicators={indicators}
+            revision={revision}
             activeTool={activeTool}
             isLoading={loading}
             onCrosshair={handleCrosshair}
@@ -144,6 +126,7 @@ function App() {
         </div>
 
         <button
+          type="button"
           className="tv-trading-toggle"
           onClick={() => setTradingOpen(!tradingOpen)}
         >
@@ -157,7 +140,7 @@ function App() {
               base={base}
               price={price}
               portfolio={portfolio}
-              watchlist={watchlist}
+              watchlist={sidebarItems}
               onBuy={handleBuy}
               onSell={handleSell}
               onReset={reset}

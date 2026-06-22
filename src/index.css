@@ -218,6 +218,30 @@ html, body, #root {
 .tv-icon-btn:hover { background: #2a2e39; }
 .tv-icon-btn:disabled { opacity: 0.5; }
 
+.tv-live-badge {
+  font-size: 11px;
+  color: #787b86;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #131722;
+  border: 1px solid #2a2e39;
+}
+
+.tv-live-badge.on { color: #26a69a; }
+
+.tv-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.tv-legend-item { font-weight: 600; }
+
+.tv-loading-tag {
+  color: #787b86;
+  font-size: 11px;
+}
+
 .spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
