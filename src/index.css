@@ -218,6 +218,27 @@ html, body, #root {
 .tv-icon-btn:hover { background: #2a2e39; }
 .tv-icon-btn:disabled { opacity: 0.5; }
 
+.tv-binance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  background: #f0b90b;
+  color: #181a20;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid #f0b90b;
+  white-space: nowrap;
+  transition: background 0.15s, filter 0.15s;
+}
+
+.tv-binance-btn:hover {
+  background: #fcd535;
+  filter: brightness(1.03);
+}
+
 .tv-live-badge {
   font-size: 11px;
   color: #787b86;
@@ -836,6 +857,7 @@ html, body, #root {
 /* Mobile */
 @media (max-width: 900px) {
   .tv-stats { display: none; }
+  .tv-binance-btn-text { display: none; }
   .tv-watchlist-panel { width: 200px; }
   .tv-trading-panel { width: 240px; }
   .tv-topbar-center { order: 3; width: 100%; }

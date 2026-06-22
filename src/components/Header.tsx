@@ -1,7 +1,8 @@
-import { Maximize2, RefreshCw, TrendingUp } from 'lucide-react';
+import { ExternalLink, Maximize2, RefreshCw, TrendingUp } from 'lucide-react';
 import type { Timeframe } from '../types';
 
 const TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
+const BINANCE_REF_URL = 'https://www.binance.com/register?ref=PAUSE';
 
 interface HeaderProps {
   symbol: string;
@@ -98,6 +99,17 @@ export function Header({
       </div>
 
       <div className="tv-topbar-right">
+        <a
+          href={BINANCE_REF_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tv-binance-btn"
+          title="Регистрация на Binance"
+        >
+          <ExternalLink size={14} />
+          <span className="tv-binance-btn-text">Торговля на Binance</span>
+        </a>
+
         <span className={`tv-live-badge ${wsConnected ? 'on' : ''}`}>
           {wsConnected ? '● Live' : '○ Offline'}
         </span>
