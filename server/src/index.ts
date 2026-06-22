@@ -183,7 +183,7 @@ app.get('/api/v1/telegram/link-url', (req, res) => {
   const clientId = String(req.query.clientId ?? '');
   if (!clientId) return res.status(400).json({ error: 'clientId обязателен' });
 
-  const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'PauseTraderAlertsBot';
+  const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'PauseTraderProBot';
   res.json({
     url: `https://t.me/${botUsername}?start=${clientId}`,
     enabled: telegramEnabled(),

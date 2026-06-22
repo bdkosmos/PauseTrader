@@ -2,7 +2,7 @@ import { getOrCreateUser, grantPro, linkTelegram } from './db.js';
 import { sendTelegramMessage, telegramApi, telegramEnabled } from './telegram-api.js';
 
 const STARS_PRICE = Number(process.env.TELEGRAM_STARS_PRICE ?? 150);
-const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME ?? 'PauseTraderAlertsBot';
+const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME ?? 'PauseTraderProBot';
 
 export function starsEnabled() {
   return telegramEnabled();
