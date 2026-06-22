@@ -14,6 +14,7 @@ import {
   stripeEnabled,
   verifyCheckoutSession,
 } from './stripe.js';
+import { createStarsInvoiceLink, starsEnabled, starsPrice } from './telegram-stars.js';
 import {
   checkPriceAlerts,
   handleTelegramUpdate,
@@ -70,6 +71,8 @@ app.get('/api/v1/health', (_req, res) => {
     ok: true,
     stripe: stripeEnabled(),
     telegram: telegramEnabled(),
+    stars: starsEnabled(),
+    starsPrice: starsPrice(),
     ntfy: ntfyEnabled(),
   });
 });
@@ -95,6 +98,23 @@ app.post('/api/v1/checkout/verify', async (req, res) => {
     console.error(err);
     res.status(400).json({
       error: err instanceof Error ? err.message : 'Не удалось подтвердить оплату',
+    });
+  }
+});
+
+app.get('/api/v1/checkout/stars', async (req, res) => {
+  try {
+    const clientId = String(req.query.clientId ?? '');
+    if (!clientId || clientId.length < 8) {
+      return res.status(400).json({ error: 'clientId обязателен' });
+    }
+
+    const data = await createStarsInvoiceLink(clientId);
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Ошибка создания счёта',
     });
   }
 });
@@ -232,6 +252,7 @@ app.listen(PORT, () => {
   console.log(`Frontend URL: ${APP_URL}`);
   console.log(`Stripe: ${stripeEnabled() ? 'on' : 'off'}`);
   console.log(`Telegram: ${telegramEnabled() ? 'on' : 'off'}`);
+  console.log(`Stars: ${starsEnabled() ? 'on' : 'off'} (${starsPrice()} XTR)`);
   console.log(`Ntfy: ${ntfyEnabled() ? 'on' : 'off'}`);
   startTelegramPolling();
 });

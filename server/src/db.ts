@@ -158,7 +158,7 @@ function ensureUserInDb(db: Database, clientId: string): UserRow {
 export function grantPro(
   clientId: string,
   months: number,
-  source: 'license' | 'admin' | 'stripe',
+  source: 'license' | 'admin' | 'stripe' | 'stars',
   extra?: {
     expiresAt?: number;
     stripeCustomerId?: string;

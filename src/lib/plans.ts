@@ -1,6 +1,7 @@
 export type PlanId = 'free' | 'pro';
 
 export const PRO_PRICE = 2;
+export const PRO_STARS = 150;
 
 export const FREE_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'TONUSDT'] as const;
 

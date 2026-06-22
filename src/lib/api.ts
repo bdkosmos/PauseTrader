@@ -45,6 +45,14 @@ export async function fetchSubscription(clientId: string): Promise<SubscriptionS
   );
 }
 
+export async function createStarsCheckout(clientId: string): Promise<{
+  url: string;
+  stars: number;
+  botUsername: string;
+}> {
+  return request(`/api/v1/checkout/stars?clientId=${encodeURIComponent(clientId)}`);
+}
+
 export async function createCheckout(clientId: string): Promise<string> {
   const data = await request<{ url: string }>('/api/v1/checkout/create', {
     method: 'POST',

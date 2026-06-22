@@ -1012,6 +1012,33 @@ html, body, #root {
 
 .pricing-cta:hover { background: #fcd535; }
 
+.pricing-cta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pricing-cta.stars {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+}
+
+.pricing-cta.stars:hover {
+  background: linear-gradient(135deg, #7d6ff0, #b8b2ff);
+}
+
+.pricing-cta.secondary {
+  background: transparent;
+  border: 1px solid #2a2e39;
+  color: #d1d4dc;
+  font-weight: 600;
+}
+
+.pricing-cta.secondary:hover {
+  background: #1e222d;
+  border-color: #434651;
+}
+
 .pricing-note {
   margin: 16px 0 0;
   font-size: 12px;

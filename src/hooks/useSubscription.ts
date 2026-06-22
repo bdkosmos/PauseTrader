@@ -3,6 +3,7 @@ import {
   activateLicense,
   apiEnabled,
   createCheckout,
+  createStarsCheckout,
   fetchSubscription,
   verifyCheckout,
   type SubscriptionStatus,
@@ -83,6 +84,17 @@ export function useSubscription() {
     window.location.href = url;
   }, [clientId]);
 
+  const startStarsCheckout = useCallback(async () => {
+    if (!apiEnabled()) {
+      setError('API не настроен. Задайте VITE_API_URL.');
+      return;
+    }
+    const { url } = await createStarsCheckout(clientId);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setPricingOpen(false);
+    setError(null);
+  }, [clientId]);
+
   const redeemLicense = useCallback(
     async (licenseKey: string) => {
       if (!apiEnabled()) throw new Error('API не настроен');
@@ -108,6 +120,7 @@ export function useSubscription() {
     closePricing,
     refresh,
     startCheckout,
+    startStarsCheckout,
     redeemLicense,
   };
 }

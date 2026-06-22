@@ -1,11 +1,15 @@
-import { getActiveAlerts, getTelegramChatId, markAlertTriggered } from './db.js';
+import { getActiveAlerts, getTelegramChatId, linkTelegram, markAlertTriggered } from './db.js';
+import { sendTelegramMessage, telegramEnabled } from './telegram-api.js';
+import {
+  handlePreCheckoutQuery,
+  handleSuccessfulPayment,
+  sendStarsInvoice,
+} from './telegram-stars.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const NTFY_BASE = (process.env.NTFY_BASE_URL ?? 'https://ntfy.sh').replace(/\/$/, '');
 
-export function telegramEnabled() {
-  return Boolean(BOT_TOKEN);
-}
+export { telegramEnabled } from './telegram-api.js';
 
 export function ntfyEnabled() {
   return true;
@@ -20,33 +24,78 @@ export function ntfyUrlForClient(clientId: string) {
   return `${NTFY_BASE}/${ntfyTopicForClient(clientId)}`;
 }
 
-export async function sendTelegramMessage(chatId: string, text: string) {
-  if (!BOT_TOKEN) return false;
-
-  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
-  });
-
-  return res.ok;
-}
-
 export async function handleTelegramUpdate(update: Record<string, unknown>) {
-  const message = update.message as
-    | { chat: { id: number }; text?: string }
+  const preCheckout = update.pre_checkout_query as
+    | {
+        id: string;
+        from: { id: number };
+        invoice_payload: string;
+        currency: string;
+        total_amount: number;
+      }
     | undefined;
-  if (!message?.text) return;
+
+  if (preCheckout) {
+    await handlePreCheckoutQuery(preCheckout);
+    return;
+  }
+
+  const message = update.message as
+    | {
+        chat: { id: number };
+        text?: string;
+        successful_payment?: {
+          currency: string;
+          total_amount: number;
+          invoice_payload: string;
+          telegram_payment_charge_id: string;
+        };
+      }
+    | undefined;
+
+  if (!message) return;
+
+  const chatId = String(message.chat.id);
+
+  if (message.successful_payment) {
+    await handleSuccessfulPayment(chatId, message.successful_payment);
+    return;
+  }
+
+  if (!message.text) return;
 
   const text = message.text.trim();
-  const chatId = String(message.chat.id);
+
+  if (text === '/terms') {
+    await sendTelegramMessage(
+      chatId,
+      '<b>Условия PauseTrader Pro</b>\n\n' +
+        'Цифровая подписка на 1 месяц. Возврат — в течение 7 дней через /paysupport.\n' +
+        'Сайт: https://bdkosmos.github.io/PauseTrader/',
+    );
+    return;
+  }
+
+  if (text === '/support' || text === '/paysupport') {
+    await sendTelegramMessage(
+      chatId,
+      'Поддержка: @AiKtg\nОпишите проблему с оплатой или активацией Pro.',
+    );
+    return;
+  }
 
   if (text.startsWith('/start')) {
     const parts = text.split(/\s+/);
-    const clientId = parts[1];
-    if (clientId && clientId.length >= 8) {
-      const { linkTelegram } = await import('./db.js');
-      linkTelegram(clientId, chatId);
+    const arg = parts[1] ?? '';
+
+    if (arg.startsWith('pay_') && arg.length > 12) {
+      const clientId = arg.slice(4);
+      await sendStarsInvoice(chatId, clientId);
+      return;
+    }
+
+    if (arg.length >= 8) {
+      linkTelegram(arg, chatId);
       await sendTelegramMessage(
         chatId,
         '✅ Telegram подключён к PauseTrader Pro.\nАлерты будут приходить сюда.',
@@ -56,7 +105,16 @@ export async function handleTelegramUpdate(update: Record<string, unknown>) {
 
     await sendTelegramMessage(
       chatId,
-      'PauseTrader Pro Alerts\n\nОткройте приложение → Pro → Алерты → «Подключить Telegram» и перейдите по ссылке.',
+      'PauseTrader Pro\n\n' +
+        'Оплатите Pro звёздами в приложении или напишите /support.',
+    );
+    return;
+  }
+
+  if (text === '/pro' || text === '/buy') {
+    await sendTelegramMessage(
+      chatId,
+      'Откройте https://bdkosmos.github.io/PauseTrader/ → Free · Pro → «Оплатить звёздами».',
     );
   }
 }
@@ -96,7 +154,7 @@ export function startTelegramPolling() {
 
       for (const update of data.result) {
         pollOffset = update.update_id + 1;
-        if (update.message) await handleTelegramUpdate({ message: update.message });
+        await handleTelegramUpdate(update as Record<string, unknown>);
       }
     } catch (err) {
       console.error('Telegram poll:', err);

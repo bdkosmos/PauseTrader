@@ -4,6 +4,7 @@ import {
   FREE_FEATURES,
   PRO_FEATURES,
   PRO_PRICE,
+  PRO_STARS,
   TELEGRAM_PAY_URL,
   type PlanId,
 } from '../lib/plans';
@@ -16,6 +17,7 @@ interface PricingModalProps {
   loading: boolean;
   onClose: () => void;
   onCheckout: () => Promise<void>;
+  onStarsCheckout: () => Promise<void>;
   onRedeemLicense: (key: string) => Promise<void>;
 }
 
@@ -27,6 +29,7 @@ export function PricingModal({
   loading,
   onClose,
   onCheckout,
+  onStarsCheckout,
   onRedeemLicense,
 }: PricingModalProps) {
   const [licenseKey, setLicenseKey] = useState('');
@@ -42,6 +45,19 @@ export function PricingModal({
       await onCheckout();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Ошибка оплаты');
+      setBusy(false);
+    }
+  };
+
+  const handleStarsCheckout = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await onStarsCheckout();
+      setMessage('Откройте Telegram и оплатите звёздами. Затем обновите страницу.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Ошибка оплаты звёздами');
+    } finally {
       setBusy(false);
     }
   };
@@ -108,15 +124,25 @@ export function PricingModal({
             {plan === 'pro' ? (
               <span className="pricing-current-tag pro-tag">Активен</span>
             ) : apiOnline ? (
-              <button
-                type="button"
-                className="pricing-cta"
-                onClick={handleCheckout}
-                disabled={busy}
-              >
-                {busy ? <Loader2 size={14} className="spin" /> : null}
-                Оплатить картой (Stripe)
-              </button>
+              <div className="pricing-cta-group">
+                <button
+                  type="button"
+                  className="pricing-cta stars"
+                  onClick={handleStarsCheckout}
+                  disabled={busy}
+                >
+                  {busy ? <Loader2 size={14} className="spin" /> : null}
+                  Оплатить звёздами · {PRO_STARS} ⭐
+                </button>
+                <button
+                  type="button"
+                  className="pricing-cta secondary"
+                  onClick={handleCheckout}
+                  disabled={busy}
+                >
+                  Картой (Stripe)
+                </button>
+              </div>
             ) : (
               <a
                 href={TELEGRAM_PAY_URL}

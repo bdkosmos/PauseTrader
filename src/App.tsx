@@ -36,6 +36,7 @@ function App() {
     openPricing,
     closePricing,
     startCheckout,
+    startStarsCheckout,
     redeemLicense,
     apiOnline,
     loading: subLoading,
@@ -145,6 +146,7 @@ function App() {
         loading={subLoading}
         onClose={closePricing}
         onCheckout={startCheckout}
+        onStarsCheckout={startStarsCheckout}
         onRedeemLicense={redeemLicense}
       />
 
