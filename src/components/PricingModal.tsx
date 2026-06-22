@@ -1,4 +1,5 @@
-import { Crown, X } from 'lucide-react';
+import { Crown, KeyRound, Loader2, X } from 'lucide-react';
+import { useState } from 'react';
 import {
   FREE_FEATURES,
   PRO_FEATURES,
@@ -10,12 +11,55 @@ import {
 interface PricingModalProps {
   open: boolean;
   plan: PlanId;
+  clientId: string;
+  apiOnline: boolean;
+  loading: boolean;
   onClose: () => void;
-  onActivateDemo: () => void;
+  onCheckout: () => Promise<void>;
+  onRedeemLicense: (key: string) => Promise<void>;
 }
 
-export function PricingModal({ open, plan, onClose, onActivateDemo }: PricingModalProps) {
+export function PricingModal({
+  open,
+  plan,
+  clientId,
+  apiOnline,
+  loading,
+  onClose,
+  onCheckout,
+  onRedeemLicense,
+}: PricingModalProps) {
+  const [licenseKey, setLicenseKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
   if (!open) return null;
+
+  const handleCheckout = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await onCheckout();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Ошибка оплаты');
+      setBusy(false);
+    }
+  };
+
+  const handleLicense = async () => {
+    if (!licenseKey.trim()) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await onRedeemLicense(licenseKey.trim());
+      setLicenseKey('');
+      setMessage('Pro активирован!');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Неверный ключ');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="pricing-overlay" onClick={onClose} role="presentation">
@@ -63,6 +107,16 @@ export function PricingModal({ open, plan, onClose, onActivateDemo }: PricingMod
             </ul>
             {plan === 'pro' ? (
               <span className="pricing-current-tag pro-tag">Активен</span>
+            ) : apiOnline ? (
+              <button
+                type="button"
+                className="pricing-cta"
+                onClick={handleCheckout}
+                disabled={busy}
+              >
+                {busy ? <Loader2 size={14} className="spin" /> : null}
+                Оплатить картой (Stripe)
+              </button>
             ) : (
               <a
                 href={TELEGRAM_PAY_URL}
@@ -76,19 +130,41 @@ export function PricingModal({ open, plan, onClose, onActivateDemo }: PricingMod
           </div>
         </div>
 
+        {plan === 'free' && (
+          <div className="pricing-license-block">
+            <label>
+              <KeyRound size={14} />
+              Есть лицензионный ключ?
+              <div className="pricing-license-row">
+                <input
+                  type="text"
+                  placeholder="PT-XXXX-XXXX-XXXX"
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                />
+                <button type="button" onClick={handleLicense} disabled={busy || !apiOnline}>
+                  Активировать
+                </button>
+              </div>
+            </label>
+          </div>
+        )}
+
         <p className="pricing-note">
-          После оплаты $2/мес напишите в{' '}
-          <a href={TELEGRAM_PAY_URL} target="_blank" rel="noopener noreferrer">
-            @AiKtg
-          </a>
-          {' '}— активируем Pro вручную. Или нажмите демо-кнопку ниже для теста.
+          ID устройства: <code>{clientId.slice(0, 8)}…</code>
+          {loading && ' · проверка…'}
+          {!apiOnline && (
+            <>
+              {' '}
+              · API офлайн — оплата через{' '}
+              <a href={TELEGRAM_PAY_URL} target="_blank" rel="noopener noreferrer">
+                @AiKtg
+              </a>
+            </>
+          )}
         </p>
 
-        {plan === 'free' && (
-          <button type="button" className="pricing-demo-btn" onClick={onActivateDemo}>
-            Активировать Pro (демо)
-          </button>
-        )}
+        {message && <p className="pricing-message">{message}</p>}
       </div>
     </div>
   );

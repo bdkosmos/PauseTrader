@@ -6,3 +6,6 @@ dist/
 .env.*
 !.env.example
 .github-token
+server/node_modules/
+server/data/
+server/.env

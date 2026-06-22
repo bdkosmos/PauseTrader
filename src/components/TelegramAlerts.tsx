@@ -1,6 +1,6 @@
-import { Bell, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { TELEGRAM_PAY_URL } from '../lib/plans';
+import { Bell, Link2, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { apiEnabled, getTelegramLinkUrl, syncAlerts } from '../lib/api';
 import type { PriceAlert } from '../types';
 
 const STORAGE_KEY = 'pausetrader-alerts';
@@ -15,19 +15,46 @@ function loadAlerts(): PriceAlert[] {
 }
 
 interface TelegramAlertsProps {
+  clientId: string;
   symbol: string;
   base: string;
   price: number;
 }
 
-export function TelegramAlerts({ symbol, base, price }: TelegramAlertsProps) {
+export function TelegramAlerts({ clientId, symbol, base, price }: TelegramAlertsProps) {
   const [alerts, setAlerts] = useState<PriceAlert[]>(loadAlerts);
   const [targetPrice, setTargetPrice] = useState('');
   const [direction, setDirection] = useState<'above' | 'below'>('above');
+  const [telegramUrl, setTelegramUrl] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts));
   }, [alerts]);
+
+  useEffect(() => {
+    if (!apiEnabled()) return;
+    getTelegramLinkUrl(clientId)
+      .then((data) => setTelegramUrl(data.enabled ? data.url : null))
+      .catch(() => setTelegramUrl(null));
+  }, [clientId]);
+
+  const pushToServer = useCallback(
+    async (list: PriceAlert[]) => {
+      if (!apiEnabled()) return;
+      try {
+        await syncAlerts(clientId, list);
+        setSyncStatus('Синхронизировано с сервером');
+      } catch {
+        setSyncStatus('Не удалось синхронизировать');
+      }
+    },
+    [clientId],
+  );
+
+  useEffect(() => {
+    if (alerts.length > 0) pushToServer(alerts);
+  }, [alerts, pushToServer]);
 
   const addAlert = () => {
     const value = parseFloat(targetPrice.replace(',', '.'));
@@ -59,10 +86,21 @@ export function TelegramAlerts({ symbol, base, price }: TelegramAlertsProps) {
         <span className="pro-feature-badge">Pro</span>
       </div>
 
-      <p className="pro-feature-desc">
-        Уведомления приходят в Telegram через{' '}
-        <a href={TELEGRAM_PAY_URL} target="_blank" rel="noopener noreferrer">@AiKtg</a>
-      </p>
+      {telegramUrl ? (
+        <a
+          href={telegramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="telegram-link-btn"
+        >
+          <Link2 size={14} />
+          Подключить Telegram
+        </a>
+      ) : (
+        <p className="pro-feature-desc">
+          Настройте TELEGRAM_BOT_TOKEN на сервере для push-уведомлений.
+        </p>
+      )}
 
       <div className="alert-form">
         <label>
@@ -96,6 +134,8 @@ export function TelegramAlerts({ symbol, base, price }: TelegramAlertsProps) {
           Добавить алерт
         </button>
       </div>
+
+      {syncStatus && <p className="pro-sync-status">{syncStatus}</p>}
 
       <div className="alert-list">
         {symbolAlerts.length === 0 ? (

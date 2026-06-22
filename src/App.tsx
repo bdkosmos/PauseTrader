@@ -29,12 +29,16 @@ function App() {
   const chartRef = useRef<IChartApi | null>(null);
 
   const {
+    clientId,
     plan,
     isPro,
     pricingOpen,
     openPricing,
     closePricing,
-    activatePro,
+    startCheckout,
+    redeemLicense,
+    apiOnline,
+    loading: subLoading,
   } = useSubscription();
 
   const indicators = useMemo(() => getIndicatorsForPlan(plan), [plan]);
@@ -136,8 +140,12 @@ function App() {
       <PricingModal
         open={pricingOpen}
         plan={plan}
+        clientId={clientId}
+        apiOnline={apiOnline}
+        loading={subLoading}
         onClose={closePricing}
-        onActivateDemo={activatePro}
+        onCheckout={startCheckout}
+        onRedeemLicense={redeemLicense}
       />
 
       <div className="tv-workspace">
@@ -195,6 +203,7 @@ function App() {
           <div className="tv-trading-panel">
             <ProPanel
               isPro={isPro}
+              clientId={clientId}
               items={allItems}
               symbol={symbol}
               base={base}

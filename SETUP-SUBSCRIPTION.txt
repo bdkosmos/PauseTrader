@@ -1,0 +1,61 @@
+PauseTrader — настройка Pro для реальных пользователей
+======================================================
+
+ЧАСТЬ 1. API-сервер (обязательно)
+---------------------------------
+1. Зарегистрируйся на https://render.com (бесплатно)
+2. New → Web Service → подключи репозиторий bdkosmos/PauseTrader
+3. Root Directory: server
+4. Build: npm install
+5. Start: npm start
+6. Environment Variables (из server/.env.example):
+   - APP_URL = https://bdkosmos.github.io/PauseTrader
+   - ADMIN_SECRET = длинный секрет (сгенерируй сам)
+   - STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID
+   - TELEGRAM_BOT_TOKEN (опционально)
+
+7. Скопируй URL сервера, например:
+   https://pausetrader-api.onrender.com
+
+
+ЧАСТЬ 2. Stripe ($2/мес)
+------------------------
+1. https://dashboard.stripe.com → Products → Add Product "PauseTrader Pro"
+2. Price: $2 / month / recurring
+3. Скопируй price_... → STRIPE_PRICE_ID
+4. Developers → API keys → Secret key → STRIPE_SECRET_KEY
+5. Developers → Webhooks → Add endpoint:
+   URL: https://ТВОЙ-API.onrender.com/api/v1/webhooks/stripe
+   Events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted
+6. Скопируй whsec_... → STRIPE_WEBHOOK_SECRET
+
+
+ЧАСТЬ 3. GitHub Pages (фронтенд)
+--------------------------------
+1. GitHub → bdkosmos/PauseTrader → Settings → Secrets and variables → Actions
+2. Variables → New: VITE_API_URL = https://ТВОЙ-API.onrender.com
+3. Push в main — сайт пересоберётся с API
+
+
+ЧАСТЬ 4. Оплата через Telegram (без Stripe)
+-------------------------------------------
+1. Пользователь пишет @AiKtg и платит $2
+2. Ты генерируешь ключ:
+   E:\PauseTrader\generate-license.bat 1
+3. Отдаёшь ключ пользователю (формат PT-XXXX-XXXX-XXXX)
+4. Пользователь: Free · Pro → вводит ключ → Активировать
+
+
+ЧАСТЬ 5. Локальная разработка
+------------------------------
+Терминал 1: E:\PauseTrader\start-api.bat
+Терминал 2: E:\PauseTrader\start.bat
+(Vite проксирует /api на localhost:8787)
+
+
+ЧАСТЬ 6. Telegram-алерты (Pro)
+------------------------------
+1. Создай бота через @BotFather
+2. TELEGRAM_BOT_TOKEN в Render
+3. Пользователь Pro → Алерты → Подключить Telegram
+4. Сервер каждые 30 сек проверяет цены Binance и шлёт уведомления
